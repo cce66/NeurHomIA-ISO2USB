@@ -12,7 +12,7 @@ fi
 # ============================================
 PROJECT_NAME="NeurHomIA"
 PROJECT_NAME_LOWER="neurhomia"
-GITHUB_REPO="moreau66/NeurHomIA"
+GITHUB_REPO="cce66/NeurHomIA"
 SERVICE_NAME="${PROJECT_NAME_LOWER}-firstboot.service"
 INSTALL_DIR="/opt/${PROJECT_NAME_LOWER}"
 
