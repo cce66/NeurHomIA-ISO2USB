@@ -75,7 +75,7 @@ NC='\033[0m'
 
 # Demande le mot de passe sudo au cas où le script n'a pas été lancé avec sudo
 000_ask_sudo_password() {
-    read -sp "Entrez le mot de passe pour la commande sudo : " SUDO_PASSWORD
+    read -sp "${YELLOW}Entrez le mot de passe pour la commande sudo : " SUDO_PASSWORD
     echo >&2
 }
 
@@ -103,8 +103,7 @@ NC='\033[0m'
 
 # 1) Demande interactive de la version d'Ubuntu Server à installer
 01_ask_ubuntu_version() {
-    echo -e "${YELLOW}1) Quelle version d'Ubuntu Server souhaitez-vous installer ? (défaut : $DEFAULT_UBUNTU_VERSION)"
-    echo -e "   Format attendu : X.Y.Z (exemple : 24.04.4)${NC}"
+    echo -e "${YELLOW} 1) Quelle version d'Ubuntu Server souhaitez-vous installer ? (défaut : $DEFAULT_UBUNTU_VERSION)${NC}"
     read -p "   Version : " USER_VERSION
 
     if [ -z "$USER_VERSION" ]; then
@@ -160,9 +159,9 @@ NC='\033[0m'
             section="${key#*-}"
             marker="${SECTIONS[$key]}"
             if grep -qi "$marker" "$FIRSTBOOT_TMP" 2>/dev/null; then
-                echo -e "   ${GREEN}✔ $section${NC}"
+                echo -n "   ${GREEN}✔ $section${NC}"
             else
-                echo -e "   ${RED}✘ $section (marqueur '$marker' absent)${NC}"
+                echo -n "   ${RED}✘ $section (marqueur '$marker' absent)${NC}"
                 MISSING=$((MISSING + 1))
             fi
         done
@@ -282,8 +281,9 @@ NC='\033[0m'
 # 6) Extraction de l'ISO
 06_extract_iso() {
     echo ""
-    echo -e "${YELLOW}6) Extraction de l'ISO Ubuntu Server ${ISO_VERSION}...${NC}"
+    echo -e "${YELLOW}6) Extraction de l'ISO Ubuntu Server ${ISO_VERSION}...${CYAN}"
     7z x "$WORK_DIR/$ISO_FILENAME" -o"$EXTRACT_DIR"
+    echo -e "${GREEN}6) Extraction de l'ISO Ubuntu Server ${ISO_VERSION}...terminée.${NC}"
 }
 
 # 7) Génération du hash du mot de passe
