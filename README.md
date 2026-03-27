@@ -18,7 +18,7 @@
 * [🧰 Prérequis](#-prérequis)
 * [🪜 Installation détaillée](#-installation-détaillée)
 * [⚙️ Fonctionnement du script](#-fonctionnement-du-script)
-* [💿 Gravure USB](#-gravure-usb)
+* [🔱 Gravure USB](#-gravure-usb)
 * [📁 Structure du dépôt](#-structure-du-dépôt)
 * [🧩 Placeholders](#-placeholders)
 * [🚀 Script firstboot](#-script-firstboot)
@@ -42,7 +42,7 @@
 
 ```bash
 mkdir -p ~/NeurHomIA-Key
-wget -O ~/NeurHomIA-Key/build-iso.sh https://raw.githubusercontent.com/cce66/NeurHomIA/main/build-iso.sh
+wget -O ~/NeurHomIA-Key/build-iso.sh https://raw.githubusercontent.com/cce66/NeurHomIA-ISO2USB/main/build-iso.sh
 chmod +x ~/NeurHomIA-Key/build-iso.sh
 cd ~/NeurHomIA-Key
 sudo bash build-iso.sh
