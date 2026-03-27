@@ -469,7 +469,7 @@ PYEOF
         "$TEMPLATE_FILE" > "$GRUB_CFG"
 
     # Vérification que l'entrée autoinstall est présente
-    if ! grep -q "Autoinstall Ubuntu Server" "$GRUB_CFG"; then
+    if ! grep -q "Autoinstallation Ubuntu Server" "$GRUB_CFG"; then
         echo -e "${RED}   ERREUR : L'entrée autoinstall n'a pas été ajoutée dans le template.${NC}"
         rm -rf "$TEMPLATE_DIR"
         exit 1
