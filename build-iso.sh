@@ -104,7 +104,7 @@ NC='\033[0m'
 
 # 1) Demande interactive de la version d'Ubuntu Server à installer
 01_ask_ubuntu_version() {
-    echo -e "${YELLOW} 1) Quelle version d'Ubuntu Server souhaitez-vous installer ? (défaut : $DEFAULT_UBUNTU_VERSION)${NC}"
+    echo -e "${YELLOW}1) Quelle version d'Ubuntu Server souhaitez-vous installer ? (défaut : $DEFAULT_UBUNTU_VERSION)${NC}"
     read -p "   Version : " USER_VERSION
 
     if [ -z "$USER_VERSION" ]; then
@@ -271,11 +271,13 @@ NC='\033[0m'
 # 5) Téléchargement de l'ISO (si non existante)
 05_download_iso() {
     echo ""
+    echo "" "${YELLOW}5) Téléchargement de l'ISO Ubuntu Server ${ISO_VERSION}...${NC}"
     if [ ! -f "$WORK_DIR/$ISO_FILENAME" ]; then
-        echo -e "${GREEN}5) Téléchargement de l'ISO Ubuntu Server ${ISO_VERSION}...${NC}"
+        echo -e "${CYAN}  Début du téléchargement...${NC}"
         wget -O "$WORK_DIR/$ISO_FILENAME" "$ISO_URL"
+        echo -e "${GREEN}  Téléchargement terminé."
     else
-        echo -e "${GREEN}5) L'ISO $ISO_FILENAME existe déjà dans $WORK_DIR. Utilisation de la copie locale.${NC}"
+        echo -e "${GREEN}  L'ISO $ISO_FILENAME existe déjà dans $WORK_DIR. Utilisation de la copie locale.${NC}"
     fi
 }
 
@@ -283,8 +285,9 @@ NC='\033[0m'
 06_extract_iso() {
     echo ""
     echo -e "${YELLOW}6) Extraction de l'ISO Ubuntu Server ${ISO_VERSION}...${CYAN}"
+    echo -e "${CYAN} Début de l'extraction...${NC}"
     7z x "$WORK_DIR/$ISO_FILENAME" -o"$EXTRACT_DIR"
-    echo -e "${GREEN}6) Extraction de l'ISO Ubuntu Server ${ISO_VERSION}...terminée.${NC}"
+    echo -e "${GREEN}  Extraction terminée.${NC}"
 }
 
 # 7) Génération du hash du mot de passe
