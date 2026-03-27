@@ -10,7 +10,7 @@ clear
 # ------------------------------
 
 # Nom du projet (utilisé pour hostname, dossier, label)
-PROJECT_NAME="NeurHomIA"
+PROJECT_NAME="NeurHomIA-ISO2USB"
 
 # Propriétaire du github
 GITHUB_OWNER_NAME="cce66"
