@@ -20,7 +20,7 @@ DEFAULT_UBUNTU_VERSION="24.04.4"
 
 # ------------------------------
 # Autres Paramètres personnalisables
-# ------------------------------
+# ------------------------------printf "\n"
 
 # Mise en forme des variables
 PROJECT_NAME_LOWER=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]')
@@ -273,13 +273,13 @@ NC='\033[0m'
 # 5) Téléchargement de l'ISO (si non existante)
 05_download_iso() {
     echo ""
-    echo "" "${YELLOW}5) Téléchargement de l'ISO Ubuntu Server ${ISO_VERSION}...${NC}"
+    echo -e "${YELLOW}5) Téléchargement de l'ISO Ubuntu Server ${ISO_VERSION}...${NC}"
     if [ ! -f "$WORK_DIR/$ISO_FILENAME" ]; then
-        echo -e "${CYAN}  Début du téléchargement...${NC}"
+        echo -e "${CYAN}   Début du téléchargement...${NC}"
         wget -O "$WORK_DIR/$ISO_FILENAME" "$ISO_URL"
-        echo -e "${GREEN}  Téléchargement terminé."
+        echo -e "${GREEN}   Téléchargement terminé."
     else
-        echo -e "${GREEN}  L'ISO $ISO_FILENAME existe déjà dans $WORK_DIR. Utilisation de la copie locale.${NC}"
+        echo -e "${GREEN}   L'ISO $ISO_FILENAME existe déjà dans $WORK_DIR. Utilisation de la copie locale.${NC}"
     fi
 }
 
@@ -287,9 +287,9 @@ NC='\033[0m'
 06_extract_iso() {
     echo ""
     echo -e "${YELLOW}6) Extraction de l'ISO Ubuntu Server ${ISO_VERSION}...${CYAN}"
-    echo -e "${CYAN} Début de l'extraction...${NC}"
+    echo -e "${CYAN}   Début de l'extraction...${NC}"
     7z x "$WORK_DIR/$ISO_FILENAME" -o"$EXTRACT_DIR"
-    echo -e "${GREEN}  Extraction terminée.${NC}"
+    echo -e "${GREEN}   Extraction terminée.${NC}"
 }
 
 # 7) Génération du hash du mot de passe
