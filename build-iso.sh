@@ -75,7 +75,8 @@ NC='\033[0m'
 
 # Demande le mot de passe sudo au cas où le script n'a pas été lancé avec sudo
 000_ask_sudo_password() {
-    read -sp "${YELLOW}Entrez le mot de passe pour la commande sudo : " SUDO_PASSWORD
+    echo "${YELLOW}" 
+    read -sp "Entrez le mot de passe pour la commande sudo : " SUDO_PASSWORD
     echo >&2
 }
 
