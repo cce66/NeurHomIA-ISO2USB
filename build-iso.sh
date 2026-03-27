@@ -160,9 +160,11 @@ NC='\033[0m'
             section="${key#*-}"
             marker="${SECTIONS[$key]}"
             if grep -qi "$marker" "$FIRSTBOOT_TMP" 2>/dev/null; then
-                echo -n "   ${GREEN}✔ $section${NC}"
+			    printf "   ${GREEN}✔ $section${NC}\n"
+                # echo -e "   ${GREEN}✔ $section${NC}"
             else
-                echo -n "   ${RED}✘ $section (marqueur '$marker' absent)${NC}"
+                printf "   ${RED}✘ $section (marqueur '$marker' absent)${NC}"
+                # echo -e "   ${RED}✘ $section (marqueur '$marker' absent)${NC}"
                 MISSING=$((MISSING + 1))
             fi
         done
