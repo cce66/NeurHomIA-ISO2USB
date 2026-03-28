@@ -790,36 +790,54 @@ PYEOF
             echo -e "${YELLOW}  Voulez-vous démonter automatiquement ces partitions ? (o/N)${NC}"
             read -r unmount_answer
             if [[ "$unmount_answer" =~ ^[OoYy]$ ]]; then
-                mount_points=$(echo "$mounted_partitions" | awk '{print $2}')
-                for mp in $mount_points; do
-                    echo -e "   Démontage de $mp..."
+                # On traite chaque partition montée
+                while IFS= read -r line; do
+                    dev=$(echo "$line" | awk '{print $1}')          # ex: sdb1
+                    mp=$(echo "$line" | awk '{print $2}')           # ex: /media/claude/PHILIPS
+                    echo -e "   Démontage de $mp (périphérique /dev/$dev)..."
 
-                    # Quitter le point de montage si on est dedans
-                    if [[ "$PWD" == "$mp"* ]]; then
+                    # Quitter le point de montage si on est dedans (seulement si le répertoire existe)
+                    if [ -d "$mp" ] && [[ "$PWD" == "$mp"* ]]; then
                         echo "   ⚠️ Vous êtes dans $mp → déplacement vers /tmp"
                         cd /tmp || exit 1
                     fi
 
-                    # Tenter un démontage classique
-                    if sudo umount "$mp"; then
-                        echo "   ✅ Démonté proprement"
-                        continue
+                    # Tentative de démontage : d'abord par point de montage s'il existe, sinon par périphérique
+                    if [ -d "$mp" ]; then
+                        # Le point de montage existe
+                        if sudo umount "$mp"; then
+                            echo "   ✅ Démonté proprement"
+                            continue
+                        fi
+                        echo "   ⚠️ Échec, tentative lazy unmount..."
+                        if sudo umount -l "$mp"; then
+                            echo "   ✅ Démonté (lazy)"
+                            continue
+                        fi
+                    else
+                        # Le point de montage n'existe pas, on passe directement au démontage par périphérique
+                        echo "   ⚠️ Le point de montage $mp n'existe pas, tentative par périphérique /dev/$dev..."
+                        if sudo umount "/dev/$dev"; then
+                            echo "   ✅ Démonté par périphérique"
+                            continue
+                        fi
+                        echo "   ⚠️ Échec, tentative lazy unmount sur périphérique..."
+                        if sudo umount -l "/dev/$dev"; then
+                            echo "   ✅ Démonté (lazy par périphérique)"
+                            continue
+                        fi
                     fi
 
-                    echo "   ⚠️ Échec, tentative lazy unmount..."
-
-                    # Tentative lazy
-                    if sudo umount -l "$mp"; then
-                        echo "   ✅ Démonté (lazy)"
-                        continue
-                    fi
-
+                    # Si on arrive ici, aucun démontage n'a réussi
                     echo "   ❌ Toujours bloqué → processus utilisant le disque :"
-                    fuser -vm "$mp"
-
+                    if [ -d "$mp" ]; then
+                        fuser -vm "$mp"
+                    else
+                        fuser -vm "/dev/$dev"
+                    fi
                     echo -e "${RED}   Échec définitif du démontage.${NC}"
-                    continue 2
-                done
+                    continue 2   # retourne au choix du périphérique
+                done <<< "$mounted_partitions"
             else
                 echo -e "${RED}   Veuillez démonter manuellement les partitions avant de continuer.${NC}"
                 continue
