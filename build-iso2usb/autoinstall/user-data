@@ -24,12 +24,12 @@ autoinstall:
     install-server: true
     allow-pw: true
   packages:
+    - curl
     - docker.io
     - docker-compose-plugin
     - ufw
     - git
     - whiptail
-    - curl
     - language-pack-fr
     - language-pack-fr-base
     - wfrench
@@ -54,4 +54,6 @@ autoinstall:
       WantedBy=multi-user.target
       SERV
     - curtin in-target -- systemctl enable __PROJECT_LOWER__-firstboot.service
+    - curtin in-target -- apt-get update
+    - curtin in-target -- apt-get upgrade -y
   shutdown: reboot
