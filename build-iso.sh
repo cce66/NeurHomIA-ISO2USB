@@ -10,7 +10,7 @@ clear
 # ------------------------------
 
 # Nom du projet (utilisé pour hostname, dossier, label)
-PROJECT_NAME="NeurHomIA-ISO2USB"
+PROJECT_NAME="NeurHomIA"
 
 # Propriétaire du github
 GITHUB_OWNER_NAME="cce66"
@@ -33,7 +33,7 @@ USERNAME="${PROJECT_NAME_LOWER}"
 DEFAULT_PASSWORD="${PROJECT_NAME_LOWER}"
 
 # URLs GitHub
-GITHUB_URL="https://raw.githubusercontent.com/${GITHUB_OWNER_NAME}/${PROJECT_NAME}/main/build-iso2usb"
+GITHUB_URL="https://raw.githubusercontent.com/${GITHUB_OWNER_NAME}/${PROJECT_NAME}-ISO2USB/main/build-iso2usb"
 
 # URL du script firstboot.sh
 FIRSTBOOT_SCRIPT_URL="${GITHUB_URL}/scripts/firstboot.sh"
