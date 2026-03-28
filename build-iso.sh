@@ -783,7 +783,8 @@ PYEOF
         fi
 
         # Vérifier si le périphérique a des partitions montées
-        mounted_partitions=$(lsblk -no NAME,MOUNTPOINT "$selected_dev" 2>/dev/null | awk '$2 {print $1, $2}')
+        # Correction : utiliser -l pour éviter les caractères graphiques
+        mounted_partitions=$(lsblk -lno NAME,MOUNTPOINT "$selected_dev" 2>/dev/null | awk '$2 {print $1, $2}')
         if [ -n "$mounted_partitions" ]; then
             echo -e "${RED}  Le périphérique $selected_dev a des partitions montées :${NC}"
             echo "$mounted_partitions"
