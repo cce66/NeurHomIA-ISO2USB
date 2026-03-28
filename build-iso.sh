@@ -131,6 +131,20 @@ NC='\033[0m'
     if [ ${#LABEL} -gt 32 ]; then
         LABEL="${LABEL:0:32}"
     fi
+echo -e "FORCE_BUILD: ${FORCE_BUILD}"
+echo -e "SUDO_PASSWORD: ${SUDO_PASSWORD}"
+echo -e "WORK_DIR: ${WORK_DIR}"
+echo -e "ISO_VERSION: ${ISO_VERSION}"
+echo -e "ISO_FILENAME: ${ISO_FILENAME}"
+echo -e "ISO_URL: ${ISO_URL}"
+echo -e "EXTRACT_DIR: ${EXTRACT_DIR}"
+echo -e "AUTOINSTALL_DIR: ${AUTOINSTALL_DIR}"
+echo -e "AUTOINSTALL_TEMPLATE_DIR: ${AUTOINSTALL_TEMPLATE_DIR}"
+echo -e "OUTPUT_ISO: ${OUTPUT_ISO}"
+echo -e "LABEL: ${LABEL}"
+echo -e "PASSWORD_HASH: ${PASSWORD_HASH}"
+
+	
 }
 
 # 2) Validation de firstboot.sh (sections requises)
