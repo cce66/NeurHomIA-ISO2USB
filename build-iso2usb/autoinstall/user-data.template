@@ -24,12 +24,10 @@ autoinstall:
     install-server: true
     allow-pw: true
   packages:
-    - docker.io
-    - docker-compose-plugin
-    - ufw
-    - git
-    - whiptail
     - curl
+    - git
+    - ufw
+    - whiptail
     - language-pack-fr
     - language-pack-fr-base
     - wfrench
