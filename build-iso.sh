@@ -132,7 +132,7 @@ NC='\033[0m'
         LABEL="${LABEL:0:32}"
     fi
 	echo ""
-	echo -e "${YELLOW}   Variables du script: "
+	echo -e "${GREEN}   Variables du script: "
 	echo -e "   FORCE_BUILD: ${FORCE_BUILD}"
 	echo -e "   SUDO_PASSWORD: ${SUDO_PASSWORD}"
 	echo -e "   WORK_DIR: ${WORK_DIR}"
