@@ -7,10 +7,20 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+#!/bin/bash
+
+# --- Début logging ---
+LOG_FILE="/home/${USER:-$SUDO_USER}/firstboot.log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo "========================================="
+echo "Début de firstboot.sh : $(date)"
+echo "Exécuté par : $(whoami)"
+echo "========================================="
+# ---------------------
+
 # ============================================
 #   VARIABLES CENTRALISÉES
 # ============================================
-
 
 # Nom du projet (utilisé pour hostname, dossier, label)
 PROJECT_NAME="NeurHomIA"
