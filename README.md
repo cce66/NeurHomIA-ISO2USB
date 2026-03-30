@@ -21,8 +21,10 @@
 * [🔱 Gravure USB](#-gravure-usb)
 * [📁 Structure du dépôt](#-structure-du-dépôt)
 * [🧩 Placeholders](#-placeholders)
+* [🖼️ Splash GRUB](#-splash-grub)
 * [🚀 Script firstboot](#-script-firstboot)
 * [⚙️ Options CLI](#-options-cli)
+* [📝 Journalisation](#-journalisation)
 * [🛠️ Dépannage](#-dépannage)
 
 ---
@@ -35,6 +37,8 @@
 * 📦 Installation de **Docker + outils essentiels**
 * ⚡ Script **firstboot exécuté via systemd**
 * 💿 ISO **hybride BIOS + UEFI**
+* 🖼️ **Splash GRUB** personnalisé avec logo du projet
+* 📝 **Journalisation** automatique dans un fichier log horodaté
 
 ---
 
@@ -137,7 +141,8 @@ build-iso2usb/
 │   ├── user-data.template
 │   └── meta-data
 ├── boot/grub/
-│   └── grub.cfg.template
+│   ├── grub.cfg.template
+│   └── splash.png
 └── scripts/
     └── firstboot.sh
 ```
@@ -167,6 +172,20 @@ build-iso2usb/
 
 ---
 
+## 🖼️ Splash GRUB
+
+Le menu de boot GRUB affiche une image de fond personnalisée avec le logo NeurHomIA.
+
+* 📍 Image source : `build-iso2usb/boot/grub/splash.png`
+* 📐 Résolution recommandée : **1024x768** (PNG)
+* ⚙️ Configuré automatiquement via `grub.cfg.template`
+
+Le splash est téléchargé depuis GitHub et injecté dans l'ISO à l'étape 10 du build. Si l'image n'est pas disponible, le menu GRUB s'affiche sans fond (dégradation gracieuse).
+
+Pour personnaliser : remplacer `splash.png` par votre propre image PNG.
+
+---
+
 ## 🚀 Script firstboot
 
 📍 `/opt/neurhomia/firstboot.sh`
@@ -187,10 +206,26 @@ build-iso2usb/
 ## ⚙️ Options CLI
 
 ```bash
+./build-iso.sh --help
 ./build-iso.sh --noforce
 ```
 
-* `--noforce` : stop si validation échoue
+| Option | Description |
+| --- | --- |
+| `--help`, `-h` | Afficher l'aide et quitter |
+| `--noforce` | Arrêter le build si la validation échoue |
+
+---
+
+## 📝 Journalisation
+
+Chaque exécution du script génère automatiquement un fichier log horodaté :
+
+```text
+~/neurhomia-build-20250329_143022.log
+```
+
+Le log contient l'intégralité de la sortie console et facilite le diagnostic en cas de problème.
 
 ---
 
