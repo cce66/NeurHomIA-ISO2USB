@@ -225,6 +225,7 @@ NC='\033[0m'
         syslinux-utils
         isolinux
         genisoimage
+		mc
     )
     
     local missing=()
