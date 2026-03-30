@@ -31,6 +31,12 @@ autoinstall:
     - language-pack-fr
     - language-pack-fr-base
     - wfrench
+    - fail2ban
+    - unattended-upgrades
+    - apt-transport-https
+    - ca-certificates
+    - gnupg
+    - lsb-release
   late-commands:
     - mkdir -p /target/opt/__PROJECT_LOWER__
     - curtin in-target -- wget -O /opt/__PROJECT_LOWER__/firstboot.sh __FIRSTBOOT_URL__
@@ -46,10 +52,16 @@ autoinstall:
       Type=oneshot
       RemainAfterExit=yes
       ExecStart=/opt/__PROJECT_LOWER__/firstboot.sh
+      StandardInput=tty
+      TTYPath=/dev/tty1
+      TTYReset=yes
+      TTYVHangup=yes
       StandardOutput=journal+console
-
+      
       [Install]
       WantedBy=multi-user.target
       SERV
     - curtin in-target -- systemctl enable __PROJECT_LOWER__-firstboot.service
+    - curtin in-target -- systemctl daemon-reload
+
   shutdown: reboot
