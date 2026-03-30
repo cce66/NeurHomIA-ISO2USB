@@ -394,6 +394,8 @@ EOF
 
 chmod +x /usr/local/bin/${PROJECT_NAME_LOWER}-{status,logs,restart,update}
 
+apt install -y curl wget git htop mc
+
 whiptail --msgbox "Utilitaires CLI installés :\n\n• ${PROJECT_NAME_LOWER}-status  — État du système\n• ${PROJECT_NAME_LOWER}-logs    — Journaux des services\n• ${PROJECT_NAME_LOWER}-restart — Redémarrer les services\n• ${PROJECT_NAME_LOWER}-update  — Mettre à jour ${PROJECT_NAME}" 14 60
 
 # ============================================
