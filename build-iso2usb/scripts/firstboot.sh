@@ -10,9 +10,19 @@ fi
 # ============================================
 #   VARIABLES CENTRALISÉES
 # ============================================
+
+
+# Nom du projet (utilisé pour hostname, dossier, label)
 PROJECT_NAME="NeurHomIA"
-PROJECT_NAME_LOWER="neurhomia"
-GITHUB_REPO="cce66/NeurHomIA"
+PROJECT_NAME_LOWER=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]')
+
+# Propriétaire du github
+GITHUB_OWNER_NAME="cce66"
+
+# URLs GitHub
+GITHUB_REPO="${GITHUB_OWNER_NAME}/${PROJECT_NAME}"
+
+
 SERVICE_NAME="${PROJECT_NAME_LOWER}-firstboot.service"
 INSTALL_DIR="/opt/${PROJECT_NAME_LOWER}"
 
