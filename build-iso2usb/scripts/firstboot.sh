@@ -7,16 +7,16 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-#!/bin/bash
-
 # --- Début logging ---
-LOG_FILE="/home/${USER:-$SUDO_USER}/firstboot.log"
+LOG_FILE="/home/${USER}/firstboot.log" 
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "========================================="
 echo "Début de firstboot.sh : $(date)"
 echo "Exécuté par : $(whoami)"
 echo "========================================="
 # ---------------------
+
+# Le reste de votre script...
 
 # ============================================
 #   VARIABLES CENTRALISÉES
@@ -66,12 +66,14 @@ validate_ip() {
 # ============================================
 #   1. BIENVENUE
 # ============================================
+echo "=== Étape 1. BIENVENUE"
 whiptail --title "${PROJECT_NAME} - Configuration initiale" \
          --msgbox "Bienvenue dans l'assistant de configuration de votre serveur ${PROJECT_NAME}.\n\nNous allons configurer le réseau, la sécurité et les services essentiels." 12 60
 
 # ============================================
 #   2. CONFIGURATION RÉSEAU
 # ============================================
+echo "=== Étape 2. CONFIGURATION RÉSEAU"
 INTERFACES=$(detect_interfaces)
 if [ -z "$INTERFACES" ]; then
     whiptail --msgbox "Aucune interface réseau filaire détectée. Vérifiez votre matériel." 8 60
@@ -130,6 +132,7 @@ fi
 # ============================================
 #   3. FUSEAU HORAIRE
 # ============================================
+echo "=== Étape 3. FUSEAU HORAIRE"
 CURRENT_TZ=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "UTC")
 TZ_CHOICE=$(whiptail --menu "Sélectionnez votre fuseau horaire (actuel : $CURRENT_TZ) :" 18 60 8 \
     "Europe/Paris"      "France métropolitaine" \
@@ -157,6 +160,7 @@ fi
 # ============================================
 #   4. CHANGEMENT DU MOT DE PASSE PAR DÉFAUT
 # ============================================
+echo "=== Étape 4. CHANGEMENT DU MOT DE PASSE PAR DÉFAUT"
 if (whiptail --yesno "Le mot de passe par défaut pour l'utilisateur '${TARGET_USER}' est '${PROJECT_NAME_LOWER}'.\n\nPour des raisons de sécurité, il est fortement recommandé de le changer.\n\nVoulez-vous le modifier maintenant ?" 12 60); then
     while true; do
         NEW_PASS=$(whiptail --passwordbox "Nouveau mot de passe :" 8 60 3>&1 1>&2 2>&3)
@@ -186,6 +190,7 @@ fi
 # ============================================
 #   5. CONFIGURATION SSH
 # ============================================
+echo "=== Étape 5. CONFIGURATION SSH"
 if (whiptail --yesno "Voulez-vous ajouter une clé publique SSH pour l'utilisateur ${TARGET_USER} ?" 8 60); then
     SSH_KEY=$(whiptail --inputbox "Collez votre clé publique (ssh-rsa AAAA...)" 10 60 3>&1 1>&2 2>&3)
     if [ -n "$SSH_KEY" ]; then
@@ -203,6 +208,7 @@ fi
 # ============================================
 #   6. PARE-FEU UFW
 # ============================================
+echo "=== Étape 6. PARE-FEU UFW"
 whiptail --infobox "Configuration du pare-feu UFW..." 8 40
 ufw --force enable
 ufw default deny incoming
@@ -218,6 +224,7 @@ whiptail --msgbox "Pare-feu UFW activé. Règles par défaut appliquées." 8 60
 # ============================================
 #   7. FAIL2BAN
 # ============================================
+echo "=== Étape 7. FAIL2BAN"
 whiptail --infobox "Configuration de fail2ban..." 8 40
 cat > /etc/fail2ban/jail.local <<EOF
 [DEFAULT]
@@ -240,6 +247,7 @@ whiptail --msgbox "fail2ban activé. Les tentatives SSH abusives seront bloquée
 # ============================================
 #   8. MISES À JOUR AUTOMATIQUES
 # ============================================
+echo "=== Étape 8. MISES À JOUR AUTOMATIQUES"
 if (whiptail --yesno "Activer les mises à jour de sécurité automatiques (unattended-upgrades) ?" 8 60); then
     dpkg-reconfigure -f noninteractive unattended-upgrades
     whiptail --msgbox "Mises à jour automatiques de sécurité activées." 8 60
@@ -248,6 +256,7 @@ fi
 # ============================================
 #   9. MOT DE PASSE MQTT
 # ============================================
+echo "=== Étape 9. MOT DE PASSE MQTT"
 MQTT_PASSWORD=""
 if (whiptail --yesno "Voulez-vous définir un mot de passe pour le broker MQTT ?\n\n(Recommandé pour sécuriser les communications domotiques)" 10 60); then
     while true; do
@@ -272,6 +281,7 @@ fi
 # ============================================
 #   10. INSTALLATION (DOCKER COMPOSE)
 # ============================================
+echo "=== Étape 10. INSTALLATION (DOCKER COMPOSE)"
 whiptail --infobox "Clonage du dépôt ${PROJECT_NAME} et démarrage des conteneurs..." 8 60
 cd /opt
 if [ -d "${PROJECT_NAME_LOWER}" ]; then
@@ -315,6 +325,7 @@ su - "${TARGET_USER}" -c "cd ${INSTALL_DIR} && docker compose ${PROFILES_ARGS} u
 # ============================================
 #   11. UTILITAIRES CLI
 # ============================================
+echo "=== Étape 11. UTILITAIRES CLI"
 whiptail --infobox "Installation des utilitaires CLI..." 8 40
 
 # neurhomia-status
@@ -388,6 +399,8 @@ whiptail --msgbox "Utilitaires CLI installés :\n\n• ${PROJECT_NAME_LOWER}-sta
 # ============================================
 #   12. FINALISATION
 # ============================================
+echo "=== Étape 12. FINALISATION"
+
 CURRENT_IP=$(get_ip)
 whiptail --title "Terminé" \
          --msgbox "Configuration terminée !\n\nAdresse IP : $CURRENT_IP\nFuseau horaire : $SELECTED_TZ\n\nAccédez au dashboard : http://$CURRENT_IP:8080\n\nLe service de premier démarrage va maintenant se désactiver." 14 60
