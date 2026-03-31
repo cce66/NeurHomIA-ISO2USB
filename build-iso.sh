@@ -919,17 +919,15 @@ trap cleanup EXIT
 # Exécution principale
 # ------------------------------
 main() {
-    LOG_FILE="$HOME/neurhomia-build-$(date +%Y%m%d_%H%M%S).log"
-    exec > >(tee -a "$LOG_FILE") 2>&1
-    echo -e "${GREEN}Log enregistré dans : $LOG_FILE${NC}"
 
     001_parse_arguments "$@"
     002_setup_work_dir
 
 	# --- Début logging ---
-	LOG_FILE="/home/${WORK_DIR}/build-iso.log"
+	LOG_FILE="${WORK_DIR}/neurhomia-build-$(date +%Y%m%d_%H%M%S).log"
 	exec > >(tee -a "$LOG_FILE") 2>&1
-	echo "========================================="
+	echo -e "${GREEN}Log enregistré dans : $LOG_FILE${NC}"
+    echo "========================================="
 	echo "Début de build-iso.sh : $(date)"
 	echo "Exécuté par : $(whoami)"
 	echo "========================================="
