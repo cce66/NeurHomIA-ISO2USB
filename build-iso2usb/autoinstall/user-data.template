@@ -37,31 +37,17 @@ autoinstall:
     - ca-certificates
     - gnupg
     - lsb-release
-  late-commands:
-    - mkdir -p /target/opt/__PROJECT_LOWER__
-    - curtin in-target -- wget -O /opt/__PROJECT_LOWER__/firstboot.sh __FIRSTBOOT_URL__
-    - curtin in-target -- chmod +x /opt/__PROJECT_LOWER__/firstboot.sh
-    - |
-      cat <<'SERV' > /target/etc/systemd/system/__PROJECT_LOWER__-firstboot.service
-      [Unit]
-      Description=__PROJECT_NAME__ First Boot Configuration
-      After=network-online.target
-      Wants=network-online.target
-
-      [Service]
-      Type=oneshot
-      RemainAfterExit=yes
-      ExecStart=/opt/__PROJECT_LOWER__/firstboot.sh
-      StandardInput=tty
-      TTYPath=/dev/tty1
-      TTYReset=yes
-      TTYVHangup=yes
-      StandardOutput=journal+console
-      
-      [Install]
-      WantedBy=multi-user.target
-      SERV
-    - curtin in-target -- systemctl enable __PROJECT_LOWER__-firstboot.service
-    - curtin in-target -- systemctl daemon-reload
-
+late-commands:
+  - mkdir -p /target/opt/__PROJECT_LOWER__
+  - curtin in-target -- wget -O /opt/__PROJECT_LOWER__/firstboot.sh __FIRSTBOOT_URL__
+  - curtin in-target -- chmod +x /opt/__PROJECT_LOWER__/firstboot.sh
+  - |
+    curtin in-target -- bash -c "cat > /home/__USERNAME__/.profile <<'EOF'
+    # ~/.profile : exécuté au login shell
+    if [ -f /opt/__PROJECT_LOWER__/firstboot.sh ] && [ ! -f /home/__USERNAME__/.firstboot-done ]; then
+        /opt/__PROJECT_LOWER__/firstboot.sh && touch /home/__USERNAME__/.firstboot-done
+    fi
+    EOF"
+  - curtin in-target -- chown __USERNAME__:__USERNAME__ /home/__USERNAME__/.profile
+  
   shutdown: reboot
