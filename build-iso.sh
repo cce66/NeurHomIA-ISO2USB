@@ -925,7 +925,8 @@ main() {
 
 	# --- Début logging ---
 	LOG_FILE="${WORK_DIR}/neurhomia-build-$(date +%Y%m%d_%H%M%S).log"
-	exec > >(tee -a "$LOG_FILE") 2>&1
+
+	exec > >(tee >(sed -E 's/\x1b\[[0-9;]*m//g' >> "$LOG_FILE")) 2>&1
 	echo -e "${GREEN}Log enregistré dans : $LOG_FILE${NC}"
     echo "========================================="
 	echo "Début de build-iso.sh : $(date)"
