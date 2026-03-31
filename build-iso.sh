@@ -925,6 +925,16 @@ main() {
 
     001_parse_arguments "$@"
     002_setup_work_dir
+
+	# --- Début logging ---
+	LOG_FILE="/home/${WORK_DIR}/build-iso.log"
+	exec > >(tee -a "$LOG_FILE") 2>&1
+	echo "========================================="
+	echo "Début de build-iso.sh : $(date)"
+	echo "Exécuté par : $(whoami)"
+	echo "========================================="
+	# ---------------------
+
     
     01_ask_ubuntu_version
     02_validate_firstboot_script
