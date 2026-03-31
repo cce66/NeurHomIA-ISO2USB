@@ -32,6 +32,7 @@ autoinstall:
     - language-pack-fr-base
     - wfrench
     - fail2ban
+    - mc
     - unattended-upgrades
     - apt-transport-https
     - ca-certificates
@@ -49,5 +50,4 @@ late-commands:
     fi
     EOF"
   - curtin in-target -- chown __USERNAME__:__USERNAME__ /home/__USERNAME__/.profile
-  
-  shutdown: reboot
+shutdown: reboot
