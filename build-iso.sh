@@ -1,6 +1,20 @@
 #!/bin/bash
 # build-iso.sh – Construction de l'ISO d'installation automatique d'Ubuntu Server et NeurHomIA
 # Utilisation : ./build-iso.sh [--noforce]
+#  
+# - build-iso2sub
+#   - autoinstall
+#     - meta-data
+#     - user-data
+#     - user-data.template
+#   - boot
+#     - grub
+#       - grub.cfg
+#       - grub.cfg.template
+#       - splash.png
+#   - scripts
+#     - firstboot.sh
+#
 
 set -e
 clear
