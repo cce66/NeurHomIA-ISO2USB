@@ -20,41 +20,50 @@ set -e
 clear
 
 # ------------------------------
+# Couleurs pour l'affichage
+# ------------------------------
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# ------------------------------
+# Messages echo
+# ------------------------------
+info()    { printf "${BLUE}  →${NC} %s\n" "$*"; }
+success() { printf "${GREEN}  ✓${NC} %s\n" "$*"; }
+warn()    { printf "${YELLOW}  !${NC} %s\n" "$*"; }
+error()   { printf "${RED}  ✗${NC} %s\n" "$*" >&2; exit 1; }
+
+# ------------------------------
 # Paramètres personnalisables du Projet
 # ------------------------------
-
 # Nom du projet (utilisé pour hostname, dossier, label)
 PROJECT_NAME="NeurHomIA"
-
 # Propriétaire du github
 GITHUB_OWNER_NAME="cce66"
-
 # Version par défaut d'Ubuntu Server
 DEFAULT_UBUNTU_VERSION="24.04.4"
 
 # ------------------------------
 # Autres Paramètres personnalisables
 # ------------------------------
-
 # Mise en forme des variables
 PROJECT_NAME_LOWER=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]')
 PROJECT_NAME_UPPER=$(echo "$PROJECT_NAME" | tr '[:lower:]' '[:upper:]')
-
 # Nom de l'utilisateur système
 USERNAME="${PROJECT_NAME_LOWER}"
-
 # Mot de passe par défaut (sera hashé)
 DEFAULT_PASSWORD="${PROJECT_NAME_LOWER}"
 
 # URLs GitHub
 GITHUB_URL="https://raw.githubusercontent.com/${GITHUB_OWNER_NAME}/${PROJECT_NAME}-ISO2USB/main/build-iso2usb"
-
 # URL du script firstboot.sh
 FIRSTBOOT_SCRIPT_URL="${GITHUB_URL}/scripts/firstboot.sh"
-
 # URL du dossier autoinstall (contenant user-data.template et meta-data)
 GITHUB_AUTOINSTALL_URL="${GITHUB_URL}/autoinstall"
-
 # URL du template grub.cfg
 GRUB_CFG_TEMPLATE_URL="${GITHUB_URL}/boot/grub/grub.cfg.template"
 
@@ -73,15 +82,6 @@ AUTOINSTALL_TEMPLATE_DIR=""
 OUTPUT_ISO=""
 LABEL=""
 PASSWORD_HASH=""
-
-# ------------------------------
-# Couleurs pour l'affichage
-# ------------------------------
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m'
 
 # ------------------------------
 # Fonctions
