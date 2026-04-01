@@ -13,17 +13,17 @@ autoinstall:
             name: "en*"
           dhcp4: true
           optional: true
-  storage:
+storage:
     layout:
       name: lvm
-  identity:
+identity:
     hostname: __HOSTNAME__
     username: __USERNAME__
     password: "__PASSWORD_HASH__"
-  ssh:
+ssh:
     install-server: true
     allow-pw: true
-  packages:
+packages:
     - curl
     - git
     - ufw
@@ -38,16 +38,22 @@ autoinstall:
     - ca-certificates
     - gnupg
     - lsb-release
-  late-commands:
-    - mkdir -p /target/opt/__PROJECT_LOWER__
-    - curtin in-target -- wget -O /opt/__PROJECT_LOWER__/firstboot.sh __FIRSTBOOT_URL__
-    - curtin in-target -- chmod +x /opt/__PROJECT_LOWER__/firstboot.sh
-    - |
-      curtin in-target -- bash -c "cat > /home/__USERNAME__/.profile <<'EOF'
-      # ~/.profile : exécuté au login shell
-      if [ -f /opt/__PROJECT_LOWER__/firstboot.sh ] && [ ! -f /home/__USERNAME__/.firstboot-done ]; then
-          /opt/__PROJECT_LOWER__/firstboot.sh && touch /home/__USERNAME__/.firstboot-done
-      fi
-      EOF"
-    - curtin in-target -- chown __USERNAME__:__USERNAME__ /home/__USERNAME__/.profile
-  shutdown: reboot
+late-commands:
+  - mkdir -p /target/opt/__PROJECT_LOWER__
+  - curtin in-target -- wget -O /opt/__PROJECT_LOWER__/firstboot.sh __FIRSTBOOT_URL__
+  - curtin in-target -- chmod +x /opt/__PROJECT_LOWER__/firstboot.sh
+
+  # Ajout d'une règle sudoers pour autoriser l'utilisateur à lancer le script sans mot de passe
+  - curtin in-target -- bash -c "echo '${USERNAME} ALL=(ALL) NOPASSWD: /opt/__PROJECT_LOWER__/firstboot.sh' > /etc/sudoers.d/__PROJECT_LOWER__"
+  - curtin in-target -- chmod 440 /etc/sudoers.d/__PROJECT_LOWER__
+
+  # Création du .profile avec appel via sudo
+  - |
+    curtin in-target -- bash -c "cat > /home/__USERNAME__/.profile <<'EOF'
+    # ~/.profile : exécuté au login shell
+    if [ -f /opt/__PROJECT_LOWER__/firstboot.sh ] && [ ! -f /home/__USERNAME__/.firstboot-done ]; then
+        sudo /opt/__PROJECT_LOWER__/firstboot.sh && touch /home/__USERNAME__/.firstboot-done
+    fi
+    EOF"
+  - curtin in-target -- chown __USERNAME__:__USERNAME__ /home/__USERNAME__/.profile
+shutdown: reboot
