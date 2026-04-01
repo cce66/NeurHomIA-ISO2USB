@@ -13,17 +13,17 @@ autoinstall:
             name: "en*"
           dhcp4: true
           optional: true
-storage:
+  storage:
     layout:
       name: lvm
-identity:
+  identity:
     hostname: __HOSTNAME__
     username: __USERNAME__
     password: "__PASSWORD_HASH__"
-ssh:
+  ssh:
     install-server: true
     allow-pw: true
-packages:
+  packages:
     - curl
     - git
     - ufw
@@ -38,7 +38,7 @@ packages:
     - ca-certificates
     - gnupg
     - lsb-release
-late-commands:
+  late-commands:
   - mkdir -p /target/opt/__PROJECT_LOWER__
   - curtin in-target -- wget -O /opt/__PROJECT_LOWER__/firstboot.sh __FIRSTBOOT_URL__
   - curtin in-target -- chmod +x /opt/__PROJECT_LOWER__/firstboot.sh
