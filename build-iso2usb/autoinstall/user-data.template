@@ -42,12 +42,8 @@ autoinstall:
     - mkdir -p /target/opt/__PROJECT_LOWER__
     - curtin in-target -- wget -O /opt/__PROJECT_LOWER__/firstboot.sh __FIRSTBOOT_URL__
     - curtin in-target -- chmod +x /opt/__PROJECT_LOWER__/firstboot.sh
-
-    # Ajout d'une règle sudoers pour autoriser l'utilisateur à lancer le script sans mot de passe
     - curtin in-target -- bash -c "echo '${USERNAME} ALL=(ALL) NOPASSWD: /opt/__PROJECT_LOWER__/firstboot.sh' > /etc/sudoers.d/__PROJECT_LOWER__"
     - curtin in-target -- chmod 440 /etc/sudoers.d/__PROJECT_LOWER__
-
-    # Création du .profile avec appel via sudo
     - |
       curtin in-target -- bash -c "cat > /home/__USERNAME__/.profile <<'EOF'
       # ~/.profile : exécuté au login shell
@@ -56,5 +52,4 @@ autoinstall:
       fi
       EOF"
     - curtin in-target -- chown __USERNAME__:__USERNAME__ /home/__USERNAME__/.profile
-
-shutdown: reboot
+  shutdown: reboot
