@@ -338,8 +338,10 @@ PASSWORD_HASH=""
     echo ""
     echo -e "${YELLOW}8) Création des fichiers d'autoinstall...${NC}"
 
-    # Création du dossier temporaire pour les templates
+    # Nettoyage du dossier temporaire
     rm -rf "$AUTOINSTALL_TEMPLATE_DIR"
+
+	# Création du dossier temporaire pour les templates
     mkdir -p "$AUTOINSTALL_TEMPLATE_DIR"
     if [ ! -d "$AUTOINSTALL_TEMPLATE_DIR" ]; then
         echo -e "${RED}   Erreur : impossible de créer $AUTOINSTALL_TEMPLATE_DIR${NC}"
@@ -375,8 +377,6 @@ PASSWORD_HASH=""
     fi
     echo -e "${GREEN}   Fichiers d'autoinstall personnalisés et prêts.${NC}"
 
-    # Nettoyage du dossier temporaire
-    rm -rf "$AUTOINSTALL_TEMPLATE_DIR"
 }
 
 # 8.5) Validation du fichier user-data (YAML)
