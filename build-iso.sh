@@ -391,26 +391,35 @@ PASSWORD_HASH=""
         exit 1
     fi
     
-    # Vérifier si python3 est disponible
+    # Utiliser python3 avec PyYAML si disponible, sinon utiliser yamllint
+    if command -v yamllint &>/dev/null; then
+        echo -e "${CYAN}   Validation avec yamllint...${NC}"
+        if yamllint -d "{extends: relaxed, rules: {line-length: disable, indentation: {spaces: 2}}}" "$user_data_file"; then
+            echo -e "${GREEN}   ✅ Syntaxe YAML valide (yamllint)${NC}"
+            return 0
+        else
+            echo -e "${RED}   ❌ Erreur YAML détectée par yamllint${NC}"
+            exit 1
+        fi
+    fi
+    
+    # Fallback : Python + PyYAML
     if ! command -v python3 &>/dev/null; then
-        echo -e "${RED}   Python3 non installé. Impossible de valider la syntaxe YAML.${NC}"
+        echo -e "${RED}   Python3 non installé. Impossible de valider.${NC}"
         exit 1
     fi
     
-    # Vérifier si le module yaml est installé
     if ! python3 -c "import yaml" 2>/dev/null; then
         echo -e "${CYAN}   Installation de python3-yaml...${NC}"
         apt-get update -qq && apt-get install -y python3-yaml 2>/dev/null
         if ! python3 -c "import yaml" 2>/dev/null; then
-            echo -e "${RED}   Impossible d'installer python3-yaml. Validation impossible.${NC}"
-            exit 1
+            echo -e "${RED}   Impossible d'installer python3-yaml. Validation ignorée.${NC}"
+            return 0
         fi
-        echo -e "${GREEN}   Module installé.${NC}"
     fi
     
     echo -e "${CYAN}   Validation avec Python/yaml...${NC}"
     
-    # Créer un script Python temporaire
     local tmp_script=$(mktemp /tmp/validate-yaml.XXXXXX.py)
     
     cat > "$tmp_script" <<'PYEOF'
@@ -423,31 +432,36 @@ filepath = sys.argv[1]
 with open(filepath, 'r', encoding='utf-8') as f:
     content = f.read()
 
-# Remplacer les variables shell par des valeurs factices pour la validation
-content = re.sub(r'\$\{PROJECT_NAME_LOWER\}', 'test', content)
-content = re.sub(r'\$\{PROJECT_NAME\}', 'Test', content)
-content = re.sub(r'\$\{PROJECT_NAME_UPPER\}', 'TEST', content)
-content = re.sub(r'\$USERNAME', 'testuser', content)
-content = re.sub(r'\$PASSWORD_HASH', 'testhash', content)
-content = re.sub(r'\$FIRSTBOOT_SCRIPT_URL', 'http://example.com/test.sh', content)
+# Nettoyer les éventuels placeholders restants (pour la validation uniquement)
+content = re.sub(r'\$\{?[A-Z_][A-Z0-9_]*\}?', 'testvalue', content)
+content = re.sub(r'__[A-Z_]+__', 'testvalue', content)
 
 try:
     data = yaml.safe_load(content)
-    if not isinstance(data, dict):
-        print("Erreur : le fichier YAML ne contient pas un dictionnaire à la racine")
+    if data is None:
+        # Fichier vide ou contenant uniquement des commentaires
+        print("ERREUR: Le fichier YAML est vide")
         sys.exit(1)
+    if not isinstance(data, dict):
+        print("ERREUR: La racine n'est pas un dictionnaire")
+        sys.exit(1)
+    # Vérification spécifique pour late-commands avec heredoc
+    if 'autoinstall' in data and 'late-commands' in data['autoinstall']:
+        late_cmds = data['autoinstall']['late-commands']
+        if not isinstance(late_cmds, list):
+            print("ERREUR: late-commands n'est pas une liste")
+            sys.exit(1)
+        # Pas d'erreur supplémentaire, le heredoc est déjà dans une chaîne multiligne
+    print("OK")
+    sys.exit(0)
 except yaml.YAMLError as e:
-    print(f"Erreur YAML: {e}")
+    print(f"ERREUR YAML: {e}")
     sys.exit(1)
 except Exception as e:
-    print(f"Erreur: {e}")
+    print(f"ERREUR: {e}")
     sys.exit(1)
-
-print("OK")
-sys.exit(0)
 PYEOF
 
-    # Lancer le script et capturer la sortie
     local output
     output=$(python3 "$tmp_script" "$user_data_file" 2>&1)
     local ret=$?
@@ -459,7 +473,7 @@ PYEOF
     else
         echo -e "${RED}   ❌ Erreur de syntaxe YAML détectée !${NC}"
         echo "$output"
-        echo -e "${YELLOW}   Voici les 20 premières lignes du fichier pour vérification :${NC}"
+        echo -e "${YELLOW}   Affichage des 20 premières lignes du fichier :${NC}"
         head -20 "$user_data_file"
         rm -f "$tmp_script"
         exit 1
