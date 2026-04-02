@@ -7,14 +7,6 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# Créer le fichier sudoers pour que le script puisse se relancer sans mot de passe
-SUDOERS_FILE="/etc/sudoers.d/neurhomia"
-if [ ! -f "$SUDOERS_FILE" ]; then
-    echo "neurhomia ALL=(ALL) NOPASSWD: /opt/neurhomia/firstboot.sh" | sudo tee "$SUDOERS_FILE" > /dev/null
-    sudo chmod 440 "$SUDOERS_FILE"
-    echo "✅ Fichier sudoers créé"
-fi
-
 # --- Début logging ---
 LOG_FILE="/home/${USER}/firstboot.log" 
 exec > >(tee -a "$LOG_FILE") 2>&1
@@ -50,6 +42,14 @@ if [ -z "$TARGET_USER" ]; then
     TARGET_USER="${PROJECT_NAME_LOWER}"
 fi
 TARGET_HOME=$(eval echo "~${TARGET_USER}")
+
+# Créer le fichier sudoers pour que le script puisse se relancer sans mot de passe
+SUDOERS_FILE="/etc/sudoers.d/${PROJECT_NAME_LOWER}"
+if [ ! -f "$SUDOERS_FILE" ]; then
+    echo "${PROJECT_NAME_LOWER} ALL=(ALL) NOPASSWD: /opt/${PROJECT_NAME_LOWER}/firstboot.sh" | sudo tee "$SUDOERS_FILE" > /dev/null
+    sudo chmod 440 "$SUDOERS_FILE"
+    echo "✅ Fichier sudoers créé"
+fi
 
 # Fonctions utilitaires
 get_ip() {
