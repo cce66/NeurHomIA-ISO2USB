@@ -42,7 +42,7 @@ autoinstall:
     - mkdir -p /target/opt/__PROJECT_LOWER__
     - curtin in-target -- wget -O /opt/__PROJECT_LOWER__/firstboot.sh __FIRSTBOOT_URL__
     - curtin in-target -- chmod +x /opt/__PROJECT_LOWER__/firstboot.sh
-    - curtin in-target -- bash -c "echo '__USERNAME__ ALL=(ALL) NOPASSWD: /opt/__PROJECT_LOWER__/firstboot.sh' > /etc/sudoers.d/__PROJECT_LOWER__"
+    - curtin in-target -- bash -c "echo ''__USERNAME__ ALL=(ALL) NOPASSWD: /opt/__PROJECT_LOWER__/firstboot.sh'' > /etc/sudoers.d/__PROJECT_LOWER__"
     - curtin in-target -- chmod 440 /etc/sudoers.d/__PROJECT_LOWER__
     # Écrire le contenu de .profile dans un fichier temporaire
     - |
