@@ -42,17 +42,6 @@ autoinstall:
     - mkdir -p /target/opt/__PROJECT_LOWER__
     - curtin in-target -- wget -O /opt/__PROJECT_LOWER__/firstboot.sh __FIRSTBOOT_URL__
     - curtin in-target -- chmod +x /opt/__PROJECT_LOWER__/firstboot.sh
-    - curtin in-target -- bash -c "echo ''__USERNAME__ ALL=(ALL) NOPASSWD: /opt/__PROJECT_LOWER__/firstboot.sh'' > /etc/sudoers.d/__PROJECT_LOWER__"
-    - curtin in-target -- chmod 440 /etc/sudoers.d/__PROJECT_LOWER__
-    # Écrire le contenu de .profile dans un fichier temporaire
-    - |
-      cat > /tmp/profile_content <<'EOF'
-      # ~/.profile : exécuté au login shell
-      if [ -f /opt/__PROJECT_LOWER__/firstboot.sh ] && [ ! -f /home/__USERNAME__/.firstboot-done ]; then
-          sudo /opt/__PROJECT_LOWER__/firstboot.sh && touch /home/__USERNAME__/.firstboot-done
-      fi
-      EOF
-    - cp /tmp/profile_content /target/home/__USERNAME__/.profile
-    - chown __USERNAME__:__USERNAME__ /target/home/__USERNAME__/.profile
-    - rm /tmp/profile_content
+    - curtin in-target -- bash -c "printf '%s\n' '# ~/.profile' 'if [ -f /opt/__PROJECT_LOWER__/firstboot.sh ] && [ ! -f /home/__USERNAME__/.firstboot-done ]; then' '    sudo /opt/__PROJECT_LOWER__/firstboot.sh && touch /home/__USERNAME__/.firstboot-done' 'fi' > /home/__USERNAME__/.profile"
+    - curtin in-target -- chown __USERNAME__:__USERNAME__ /home/__USERNAME__/.profile
   shutdown: reboot
