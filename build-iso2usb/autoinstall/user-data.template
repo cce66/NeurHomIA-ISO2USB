@@ -39,6 +39,7 @@ autoinstall:
     - gnupg
     - lsb-release
   late-commands:
+late-commands:
   - mkdir -p /target/opt/__PROJECT_LOWER__
   - curtin in-target -- wget -O /opt/__PROJECT_LOWER__/firstboot.sh __FIRSTBOOT_URL__
   - curtin in-target -- chmod +x /opt/__PROJECT_LOWER__/firstboot.sh
