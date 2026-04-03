@@ -16,8 +16,6 @@ echo "Exécuté par : $(whoami)"
 echo "========================================="
 # ---------------------
 
-# Le reste de votre script...
-
 # ============================================
 #   VARIABLES CENTRALISÉES
 # ============================================
@@ -415,8 +413,8 @@ CURRENT_IP=$(get_ip)
 whiptail --title "Terminé" \
          --msgbox "Configuration terminée !\n\nAdresse IP : $CURRENT_IP\nFuseau horaire : $SELECTED_TZ\n\nAccédez au dashboard : http://$CURRENT_IP:8080\n\nLe service de premier démarrage va maintenant se désactiver." 16 75
 
-systemctl disable "${SERVICE_NAME}"
-rm -f "/etc/systemd/system/${SERVICE_NAME}"
+# systemctl disable "${SERVICE_NAME}"
+# rm -f "/etc/systemd/system/${SERVICE_NAME}"
 systemctl daemon-reload
 
 exit 0
