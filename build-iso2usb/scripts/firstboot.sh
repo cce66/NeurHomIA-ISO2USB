@@ -1,541 +1,223 @@
 #!/bin/bash
-# firstboot.sh – Configuration interactive au premier démarrage
-# Usage : ./firstboot.sh [--step N] | [--list] | [--help]
-#   --step N  : exécute uniquement l'étape N (1 à 12)
-#   --list    : liste les étapes disponibles
-#   --help    : affiche cette aide
+# NeurHomIA — firstboot v3 propre
 
 set -euo pipefail
-exec > /var/log/neurhomia-firstboot.log 2>&1
+LOG_FILE="/var/log/neurhomia-firstboot.log"
+exec > "$LOG_FILE" 2>&1
 set -x
 
-# Vérification des droits root
-if [ "$EUID" -ne 0 ]; then
-    echo "Ce script doit être exécuté en tant que root." >&2
-    exit 1
-fi
-
 # ============================================
-#   VARIABLES GLOBALES
+# VARIABLES
 # ============================================
 PROJECT_NAME="NeurHomIA"
-PROJECT_NAME_LOWER=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]')
-GITHUB_OWNER_NAME="cce66"
-GITHUB_REPO="${GITHUB_OWNER_NAME}/${PROJECT_NAME}"
+PROJECT_NAME_LOWER="neurhomia"
+GITHUB_REPO="cce66/NeurHomIA"
 INSTALL_DIR="/opt/${PROJECT_NAME_LOWER}"
-LOG_FILE="/home/firstboot.log"
 
-# Détection du premier utilisateur
 TARGET_USER=$(awk -F: '$3 >= 1000 && $3 < 65534 { print $1; exit }' /etc/passwd || true)
 [ -z "$TARGET_USER" ] && TARGET_USER="${PROJECT_NAME_LOWER}"
-TARGET_HOME=$(eval echo "~${TARGET_USER}")
 
-# Variables qui seront définies au fil des étapes
 SELECTED_TZ=""
 MQTT_PASSWORD=""
-CURRENT_IP=""
 
-# Fonction de logging
 log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" | tee -a "$LOG_FILE"
+    echo "$(date '+%F %T') [INFO] $*"
 }
 
-# Fonctions utilitaires
-get_ip() {
-    ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1 | head -n1
-}
-
-detect_interfaces() {
-    ls /sys/class/net/ | grep -v lo
-}
-
-validate_ip() {
-    local ip=$1
-    if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
-        IFS='.' read -r o1 o2 o3 o4 <<< "$ip"
-        ((o1 <= 255 && o2 <= 255 && o3 <= 255 && o4 <= 255)) && return 0
-    fi
-    return 1
-}
-
-# ============================================
-#   ÉTAPES (FONCTIONS)
-# ============================================
-
-etape1_bienvenue() {
-    log "=== Étape 1 : Bienvenue ==="
-    whiptail --title "${PROJECT_NAME} - Configuration initiale" \
-             --msgbox "Bienvenue dans l'assistant de configuration de votre serveur ${PROJECT_NAME}.\n\nNous allons configurer le réseau, la sécurité et les services essentiels." 12 60
-}
-
-etape2_reseau() {
-    log "=== Étape 2 : Configuration réseau ==="
-    INTERFACES=$(detect_interfaces)
-    if [ -z "$INTERFACES" ]; then
-        whiptail --msgbox "Aucune interface réseau filaire détectée. Vérifiez votre matériel." 8 60
-        return 1
-    fi
-
-    interface_list=()
-    for iface in $INTERFACES; do
-        interface_list+=("$iface" "")
+wait_docker() {
+    log "Attente Docker..."
+    until systemctl is-active --quiet docker; do
+        sleep 2
     done
-
-    SELECTED_IFACE=$(whiptail --menu "Choisissez l'interface à configurer :" 15 60 4 "${interface_list[@]}" 3>&1 1>&2 2>&3)
-    if [ -z "$SELECTED_IFACE" ]; then
-        whiptail --msgbox "Aucune interface sélectionnée. Utilisation du DHCP par défaut." 8 60
-    else
-        if (whiptail --yesno "Utiliser DHCP pour $SELECTED_IFACE ?" 8 50); then
-            cat > /etc/netplan/99-${PROJECT_NAME_LOWER}.yaml <<EOF
-network:
-  version: 2
-  ethernets:
-    $SELECTED_IFACE:
-      dhcp4: true
-      optional: true
-EOF
-        else
-            STATIC_IP=$(whiptail --inputbox "Entrez l'adresse IP avec CIDR (ex: 192.168.1.100/24)" 8 60 3>&1 1>&2 2>&3)
-            GATEWAY=$(whiptail --inputbox "Entrez l'adresse de la passerelle par défaut" 8 60 3>&1 1>&2 2>&3)
-            DNS=$(whiptail --inputbox "Entrez les serveurs DNS (séparés par des virgules)" 8 60 "8.8.8.8,1.1.1.1" 3>&1 1>&2 2>&3)
-            if ! validate_ip "${STATIC_IP%%/*}"; then
-                whiptail --msgbox "Adresse IP invalide. Abandon." 8 60
-                return 1
-            fi
-            cat > /etc/netplan/99-${PROJECT_NAME_LOWER}.yaml <<EOF
-network:
-  version: 2
-  ethernets:
-    $SELECTED_IFACE:
-      addresses:
-        - $STATIC_IP
-      routes:
-        - to: default
-          via: $GATEWAY
-      nameservers:
-        addresses: [$(echo "$DNS" | sed 's/,/, /g')]
-EOF
-        fi
-        netplan apply
-        sleep 3
-    fi
-    CURRENT_IP=$(get_ip)
-    whiptail --msgbox "Configuration réseau appliquée. Adresse IP : $CURRENT_IP" 8 60
 }
 
-etape3_fuseau_horaire() {
-    log "=== Étape 3 : Fuseau horaire ==="
-    CURRENT_TZ=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "UTC")
-    TZ_CHOICE=$(whiptail --menu "Sélectionnez votre fuseau horaire (actuel : $CURRENT_TZ) :" 18 60 8 \
-        "Europe/Paris"      "France métropolitaine" \
-        "Europe/Brussels"   "Belgique" \
-        "Europe/Zurich"     "Suisse" \
-        "America/Montreal"  "Québec / Canada Est" \
-        "America/New_York"  "USA Est" \
-        "America/Chicago"   "USA Centre" \
-        "America/Los_Angeles" "USA Ouest" \
-        "Autre"             "Saisie libre" \
-        3>&1 1>&2 2>&3)
-
-    if [ "$TZ_CHOICE" = "Autre" ]; then
-        TZ_CHOICE=$(whiptail --inputbox "Entrez le fuseau horaire (ex: Asia/Tokyo) :" 8 60 "$CURRENT_TZ" 3>&1 1>&2 2>&3)
-    fi
-    if [ -n "$TZ_CHOICE" ] && [ "$TZ_CHOICE" != "Autre" ]; then
-        timedatectl set-timezone "$TZ_CHOICE"
-        SELECTED_TZ="$TZ_CHOICE"
-    else
-        SELECTED_TZ="$CURRENT_TZ"
-    fi
-    whiptail --msgbox "Fuseau horaire configuré : $SELECTED_TZ" 8 60
-}
-
-etape4_mot_de_passe_utilisateur() {
-    log "=== Étape 4 : Changement du mot de passe utilisateur ==="
-    if (whiptail --yesno "Le mot de passe par défaut pour '${TARGET_USER}' est '${PROJECT_NAME_LOWER}'.\n\nVoulez-vous le modifier maintenant ?" 12 60); then
-        while true; do
-            NEW_PASS=$(whiptail --passwordbox "Nouveau mot de passe :" 8 60 3>&1 1>&2 2>&3)
-            [ $? -ne 0 ] && break
-            NEW_PASS2=$(whiptail --passwordbox "Confirmation :" 8 60 3>&1 1>&2 2>&3)
-            if [ "$NEW_PASS" != "$NEW_PASS2" ]; then
-                whiptail --msgbox "Les mots de passe ne correspondent pas." 8 60
-            elif [ -z "$NEW_PASS" ]; then
-                whiptail --msgbox "Le mot de passe ne peut pas être vide." 8 60
-            else
-                echo "${TARGET_USER}:${NEW_PASS}" | chpasswd
-                whiptail --msgbox "Mot de passe changé." 8 60
-                break
-            fi
-        done
-    else
-        whiptail --msgbox "Attention : mot de passe par défaut conservé." 8 60
-    fi
-}
-
-etape5_ssh_public_key() {
-    log "=== Étape 5 : Configuration SSH (clé publique) ==="
-    if (whiptail --yesno "Ajouter une clé publique SSH pour ${TARGET_USER} ?" 8 60); then
-        SSH_KEY=$(whiptail --inputbox "Collez votre clé publique (ssh-rsa...)" 10 60 3>&1 1>&2 2>&3)
-        if [ -n "$SSH_KEY" ]; then
-            mkdir -p "${TARGET_HOME}/.ssh"
-            echo "$SSH_KEY" >> "${TARGET_HOME}/.ssh/authorized_keys"
-            chown -R "${TARGET_USER}:${TARGET_USER}" "${TARGET_HOME}/.ssh"
-            chmod 700 "${TARGET_HOME}/.ssh"
-            chmod 600 "${TARGET_HOME}/.ssh/authorized_keys"
-            sed -i 's/^PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config.d/99-${PROJECT_NAME_LOWER}.conf 2>/dev/null
-            systemctl restart sshd
-            whiptail --msgbox "Clé SSH ajoutée. Authentification par mot de passe désactivée." 8 60
-        fi
-    fi
-}
-
-etape6_ufw() {
-    log "=== Étape 6 : Pare-feu UFW ==="
-    ufw --force enable
-    ufw default deny incoming
-    ufw default allow outgoing
-    ufw allow 22/tcp comment 'SSH'
-    ufw allow 80/tcp comment 'HTTP'
-    ufw allow 443/tcp comment 'HTTPS'
-    ufw allow 1883/tcp comment 'MQTT'
-    ufw allow 8080/tcp comment "${PROJECT_NAME}"
-    ufw allow 9001/tcp comment 'MQTT WebSocket'
-    whiptail --msgbox "Pare-feu UFW activé." 8 60
-}
-
-etape7_fail2ban() {
-    log "=== Étape 7 : Fail2ban ==="
-    cat > /etc/fail2ban/jail.local <<EOF
-[DEFAULT]
-bantime  = 3600
-findtime = 600
-maxretry = 5
-backend  = systemd
-
-[sshd]
-enabled  = true
-port     = ssh
-filter   = sshd
-logpath  = /var/log/auth.log
-maxretry = 5
-EOF
-    systemctl enable --now fail2ban
-    whiptail --msgbox "fail2ban activé (5 essais, bannissement 1h)." 8 60
-}
-
-etape8_unattended_upgrades() {
-    log "=== Étape 8 : Mises à jour automatiques ==="
-    if (whiptail --yesno "Activer les mises à jour de sécurité automatiques ?" 8 60); then
-        dpkg-reconfigure -f noninteractive unattended-upgrades
-        whiptail --msgbox "Mises à jour automatiques activées." 8 60
-    fi
-}
-
-etape9_mqtt_password() {
-    log "=== Étape 9 : Mot de passe MQTT ==="
-    MQTT_PASSWORD=""
-    if (whiptail --yesno "Définir un mot de passe pour le broker MQTT ?\n(Recommandé pour sécuriser les communications)" 10 60); then
-        while true; do
-            MQTT_PASS=$(whiptail --passwordbox "Mot de passe MQTT :" 8 60 3>&1 1>&2 2>&3)
-            [ $? -ne 0 ] && break
-            MQTT_PASS2=$(whiptail --passwordbox "Confirmation :" 8 60 3>&1 1>&2 2>&3)
-            if [ "$MQTT_PASS" != "$MQTT_PASS2" ]; then
-                whiptail --msgbox "Les mots de passe ne correspondent pas." 8 60
-            elif [ -z "$MQTT_PASS" ]; then
-                whiptail --msgbox "Mot de passe vide." 8 60
-            else
-                MQTT_PASSWORD="$MQTT_PASS"
-                whiptail --msgbox "Mot de passe MQTT enregistré." 8 60
-                break
-            fi
-        done
-    fi
-}
-
-etape9_5_install_docker() {
-    log "=== Étape 9.5 : Installation de Docker ==="
-    if ! command -v docker &> /dev/null; then
-        whiptail --infobox "Installation de Docker... Cela peut prendre quelques minutes." 8 60
+install_docker() {
+    if ! command -v docker >/dev/null; then
+        log "Installation Docker..."
         apt-get update -qq
         apt-get install -y -qq ca-certificates curl gnupg lsb-release
+
         mkdir -p /etc/apt/keyrings
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+        > /etc/apt/sources.list.d/docker.list
+
         apt-get update -qq
         apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-        # Attendre Docker
-        echo "[INFO] Attente du démarrage de Docker..."
-        until systemctl is-active --quiet docker; do
-            sleep 2
-        done
-        # Ajout utilisateur
-        usermod -aG docker "$TARGET_USER"
-        newgrp docker <<EOF
-        cd ${INSTALL_DIR}
-          docker compose ${PROFILES_ARGS} up -d
-        EOF
-        # active docker
+
         systemctl enable --now docker
-        whiptail --msgbox "Docker installé avec succès." 8 60
-    else
-        whiptail --msgbox "Docker est déjà installé." 8 60
     fi
+
+    wait_docker
+    usermod -aG docker "$TARGET_USER" || true
 }
 
-etape9_6_install_mosquitto() {
-    log "=== Étape 9.6 : Installation de Mosquitto sécurisé ==="
-    if [ -n "$MQTT_PASSWORD" ]; then
-        whiptail --infobox "Déploiement du broker Mosquitto avec authentification..." 8 60
-        mkdir -p /opt/mosquitto/config /opt/mosquitto/data /opt/mosquitto/log
-        chown -R 1883:1883 /opt/mosquitto/data /opt/mosquitto/log
-        apt-get install -y -qq mosquitto-clients || true
-        touch /opt/mosquitto/config/passwd
-        mosquitto_passwd -b /opt/mosquitto/config/passwd "${PROJECT_NAME_LOWER}" "$MQTT_PASSWORD"
-        chmod 600 /opt/mosquitto/config/passwd
-        chown 1883:1883 /opt/mosquitto/config/passwd
-        cat > /opt/mosquitto/config/mosquitto.conf <<EOF
-persistence true
-persistence_location /mosquitto/data/
-log_dest file /mosquitto/log/mosquitto.log
-listener 1883
-allow_anonymous false
-password_file /mosquitto/config/passwd
-EOF
-        docker run -d \
-            --name mosquitto \
-            --restart unless-stopped \
-            -p 1883:1883 \
-            -v /opt/mosquitto/config:/mosquitto/config:ro \
-            -v /opt/mosquitto/data:/mosquitto/data \
-            -v /opt/mosquitto/log:/mosquitto/log \
-            eclipse-mosquitto:latest
-        whiptail --msgbox "Broker MQTT Mosquitto sécurisé installé.\n\nUtilisateur : ${PROJECT_NAME_LOWER}\nMot de passe : (celui que vous avez défini)" 10 60
-    else
-        if (whiptail --yesno "Aucun mot de passe MQTT défini. Voulez-vous quand même installer Mosquitto sans authentification ? (déconseillé)" 10 60); then
-            docker run -d \
-                --name mosquitto \
-                --restart unless-stopped \
-                -p 1883:1883 \
-                eclipse-mosquitto:latest
-            whiptail --msgbox "Mosquitto installé SANS authentification." 8 60
-        fi
-    fi
-}
-
-etape10_clone_et_docker_compose() {
-    log "=== Étape 10 : Clonage du dépôt et lancement des conteneurs ==="
-    whiptail --infobox "Clonage du dépôt ${PROJECT_NAME} et démarrage des conteneurs..." 8 60
-    cd /opt
-    [ -d "${PROJECT_NAME_LOWER}" ] && rm -rf "${PROJECT_NAME_LOWER}"
-    git clone "https://github.com/${GITHUB_REPO}.git" "${PROJECT_NAME_LOWER}"
-    cd "${PROJECT_NAME_LOWER}"
-    cat > .env <<EOF
-TZ=${SELECTED_TZ}
-MQTT_PASSWORD=${MQTT_PASSWORD}
-EOF
-    chown "${TARGET_USER}:${TARGET_USER}" .env
-    chmod 600 .env
-
-    PROFILES=$(whiptail --checklist "Sélectionnez les profils à activer (ESPACE pour sélectionner) :" 15 50 4 \
-        "zigbee2mqtt" "Pont Zigbee" OFF \
-        "meteo" "Station météo" OFF \
-        "backup" "Sauvegardes" OFF \
-        3>&1 1>&2 2>&3)
-
-    PROFILES_CLEAN=$(echo "$PROFILES" | sed 's/"//g')
-    echo "$PROFILES_CLEAN" > "${INSTALL_DIR}/.profiles"
-    chown "${TARGET_USER}:${TARGET_USER}" "${INSTALL_DIR}/.profiles"
-
-    if [ -n "$PROFILES_CLEAN" ]; then
-        PROFILES_ARGS="--profile $(echo "$PROFILES_CLEAN" | sed 's/ / --profile /g')"
-    else
-        PROFILES_ARGS=""
-    fi
-    su - "${TARGET_USER}" -c "cd ${INSTALL_DIR} && docker compose ${PROFILES_ARGS} up -d"
-}
-
-etape11_utilitaires_cli() {
-    log "=== Étape 11 : Utilitaires CLI ==="
-    whiptail --infobox "Installation des utilitaires CLI..." 8 40
-
-    cat > /usr/local/bin/${PROJECT_NAME_LOWER}-status <<EOF
-#!/bin/bash
-echo "=== ${PROJECT_NAME} — État du système ==="
-echo ""
-echo "--- Conteneurs Docker ---"
-cd ${INSTALL_DIR} && docker compose ps
-echo ""
-echo "--- Mosquitto ---"
-docker ps --filter name=mosquitto --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-echo ""
-echo "--- Espace disque ---"
-df -h /
-echo ""
-echo "--- Mémoire ---"
-free -h
-echo ""
-echo "--- Uptime ---"
-uptime
-EOF
-
-    cat > /usr/local/bin/${PROJECT_NAME_LOWER}-logs <<EOF
-#!/bin/bash
-SERVICE=\${1:-""}
-if [ "\$SERVICE" = "mosquitto" ]; then
-    docker logs -f mosquitto
-else
-    cd ${INSTALL_DIR}
-    if [ -n "\$SERVICE" ]; then
-        docker compose logs -f "\$SERVICE"
-    else
-        docker compose logs -f
-    fi
-fi
-EOF
-
-    cat > /usr/local/bin/${PROJECT_NAME_LOWER}-restart <<EOF
-#!/bin/bash
-echo "Redémarrage des services..."
-cd ${INSTALL_DIR}
-PROFILES_FILE="${INSTALL_DIR}/.profiles"
-PROFILES_ARGS=""
-if [ -f "\$PROFILES_FILE" ] && [ -s "\$PROFILES_FILE" ]; then
-    for p in \$(cat "\$PROFILES_FILE"); do
-        PROFILES_ARGS="\$PROFILES_ARGS --profile \$p"
-    done
-fi
-docker compose \$PROFILES_ARGS restart
-docker restart mosquitto 2>/dev/null
-echo "Redémarrage terminé."
-EOF
-
-    cat > /usr/local/bin/${PROJECT_NAME_LOWER}-update <<EOF
-#!/bin/bash
-echo "Mise à jour de ${PROJECT_NAME}..."
-cd ${INSTALL_DIR}
-git pull
-docker compose pull
-PROFILES_FILE="${INSTALL_DIR}/.profiles"
-PROFILES_ARGS=""
-if [ -f "\$PROFILES_FILE" ] && [ -s "\$PROFILES_FILE" ]; then
-    for p in \$(cat "\$PROFILES_FILE"); do
-        PROFILES_ARGS="\$PROFILES_ARGS --profile \$p"
-    done
-fi
-docker compose \$PROFILES_ARGS up -d
-echo "Mise à jour terminée."
-EOF
-
-    chmod +x /usr/local/bin/${PROJECT_NAME_LOWER}-{status,logs,restart,update}
-    apt install -y curl wget git htop mc
-    whiptail --msgbox "Utilitaires CLI installés :\n\n• ${PROJECT_NAME_LOWER}-status\n• ${PROJECT_NAME_LOWER}-logs\n• ${PROJECT_NAME_LOWER}-restart\n• ${PROJECT_NAME_LOWER}-update" 14 60
-}
-
-etape12_finalisation() {
-    log "=== Étape 12 : Finalisation ==="
-    CURRENT_IP=$(get_ip)
-    whiptail --title "Terminé" \
-             --msgbox "Configuration terminée !\n\nAdresse IP : $CURRENT_IP\nFuseau horaire : $SELECTED_TZ\n\nAccédez au dashboard : http://$CURRENT_IP:8080\n\nLe service de premier démarrage va maintenant se désactiver." 16 75
-
-    systemctl disable ${PROJECT_NAME_LOWER}-firstboot.service 2>/dev/null
-    
-    # rm -f "/etc/systemd/system/${PROJECT_NAME_LOWER}-firstboot.service" 2>/dev/null
-    
-    if [ -d "${INSTALL_DIR}" ]; then
-        echo "[INFO] Mise à jour du dépôt existant..."
+safe_git_sync() {
+    if [ -d "${INSTALL_DIR}/.git" ]; then
+        log "Git pull..."
         cd "${INSTALL_DIR}"
         git pull
     else
-        git clone "https://github.com/${GITHUB_REPO}.git" "${INSTALL_DIR}"
+        log "Git clone..."
+        for i in {1..5}; do
+            git clone "https://github.com/${GITHUB_REPO}.git" "${INSTALL_DIR}" && break
+            sleep 5
+        done
     fi
-    systemctl daemon-reload
 }
 
 # ============================================
-#   EXÉCUTION SELON LES ARGUMENTS
+# UI
 # ============================================
-show_help() {
-    cat <<EOF
-Usage: $0 [OPTION]
+whiptail --title "$PROJECT_NAME" \
+  --msgbox "Configuration initiale $PROJECT_NAME" 10 60
 
-Options:
-  --step N    Exécute uniquement l'étape N (1 à 12, 9.5, 9.6)
-  --list      Liste les étapes disponibles avec leurs numéros
-  --help      Affiche cette aide
+# ============================================
+# RESEAU
+# ============================================
+IFACE=$(ip -o -4 route show to default | awk '{print $5}' | head -n1 || true)
 
-Sans option, exécute toutes les étapes dans l'ordre.
+if [ -n "$IFACE" ]; then
+    if whiptail --yesno "Configurer le réseau ($IFACE) ?" 8 50; then
+        if whiptail --yesno "Utiliser DHCP ?" 8 50; then
+            cat > /etc/netplan/99-${PROJECT_NAME_LOWER}.yaml <<EOF
+network:
+  version: 2
+  ethernets:
+    $IFACE:
+      dhcp4: true
 EOF
-}
+        else
+            IP=$(whiptail --inputbox "IP/CIDR" 8 50 3>&1 1>&2 2>&3)
+            GW=$(whiptail --inputbox "Gateway" 8 50 3>&1 1>&2 2>&3)
 
-list_steps() {
-    cat <<EOF
-Étapes disponibles :
-  1   - Bienvenue
-  2   - Configuration réseau
-  3   - Fuseau horaire
-  4   - Mot de passe utilisateur
-  5   - Clé SSH
-  6   - Pare-feu UFW
-  7   - Fail2ban
-  8   - Mises à jour automatiques
-  9   - Mot de passe MQTT
-  9.5 - Installation Docker
-  9.6 - Installation Mosquitto sécurisé
-  10  - Clonage du dépôt et Docker Compose
-  11  - Utilitaires CLI
-  12  - Finalisation
+            cat > /etc/netplan/99-${PROJECT_NAME_LOWER}.yaml <<EOF
+network:
+  version: 2
+  ethernets:
+    $IFACE:
+      addresses: [$IP]
+      routes:
+        - to: default
+          via: $GW
 EOF
-}
-
-# Si aucun argument, exécuter toutes les étapes
-if [ $# -eq 0 ]; then
-    log "Début de l'exécution complète du script firstboot.sh"
-    etape1_bienvenue
-    etape2_reseau
-    etape3_fuseau_horaire
-    etape4_mot_de_passe_utilisateur
-    etape5_ssh_public_key
-    etape6_ufw
-    etape7_fail2ban
-    etape8_unattended_upgrades
-    etape9_mqtt_password
-    etape9_5_install_docker
-    etape9_6_install_mosquitto
-    etape10_clone_et_docker_compose
-    etape11_utilitaires_cli
-    etape12_finalisation
-    exit 0
+        fi
+        netplan apply
+    fi
 fi
 
-# Traitement des arguments
-case "$1" in
-    --step)
-        STEP="$2"
-        case "$STEP" in
-            1)   etape1_bienvenue ;;
-            2)   etape2_reseau ;;
-            3)   etape3_fuseau_horaire ;;
-            4)   etape4_mot_de_passe_utilisateur ;;
-            5)   etape5_ssh_public_key ;;
-            6)   etape6_ufw ;;
-            7)   etape7_fail2ban ;;
-            8)   etape8_unattended_upgrades ;;
-            9)   etape9_mqtt_password ;;
-            9.5) etape9_5_install_docker ;;
-            9.6) etape9_6_install_mosquitto ;;
-            10)  etape10_clone_et_docker_compose ;;
-            11)  etape11_utilitaires_cli ;;
-            12)  etape12_finalisation ;;
-            *)   echo "Étape invalide. Utilisez --list pour voir les étapes."; exit 1 ;;
-        esac
-        ;;
-    --list)
-        list_steps
-        ;;
-    --help)
-        show_help
-        ;;
-    *)
-        echo "Option inconnue. Utilisez --help." >&2
-        exit 1
-        ;;
-esac
+# ============================================
+# TIMEZONE
+# ============================================
+SELECTED_TZ=$(timedatectl show --property=Timezone --value)
+timedatectl set-timezone "$SELECTED_TZ"
+
+# ============================================
+# UFW SAFE
+# ============================================
+ufw allow OpenSSH || true
+ufw allow 80 || true
+ufw allow 443 || true
+ufw allow 1883 || true
+ufw --force enable || true
+
+# ============================================
+# MQTT PASSWORD
+# ============================================
+if whiptail --yesno "Configurer mot de passe MQTT ?" 8 50; then
+    MQTT_PASSWORD=$(whiptail --passwordbox "Mot de passe MQTT" 8 50 3>&1 1>&2 2>&3)
+fi
+
+# ============================================
+# DOCKER
+# ============================================
+install_docker
+
+# ============================================
+# GIT
+# ============================================
+safe_git_sync
+cd "$INSTALL_DIR"
+
+# ============================================
+# ENV
+# ============================================
+cat > .env <<EOF
+TZ=${SELECTED_TZ}
+MQTT_PASSWORD=${MQTT_PASSWORD}
+EOF
+chmod 600 .env
+
+# ============================================
+# PROFILS
+# ============================================
+PROFILES=$(whiptail --checklist "Profils Docker :" 15 50 4 \
+    "zigbee2mqtt" "Zigbee" OFF \
+    "meteo" "Météo" OFF \
+    "backup" "Backup" OFF \
+    3>&1 1>&2 2>&3)
+
+PROFILES_CLEAN=$(echo "$PROFILES" | tr -d '"')
+echo "$PROFILES_CLEAN" > .profiles
+
+PROFILES_ARGS=""
+for p in $PROFILES_CLEAN; do
+    PROFILES_ARGS="$PROFILES_ARGS --profile $p"
+done
+
+# ============================================
+# MOSQUITTO CONFIG (PAS docker run)
+# ============================================
+if [ -n "$MQTT_PASSWORD" ]; then
+    mkdir -p /opt/mosquitto/config
+    mosquitto_passwd -b /opt/mosquitto/config/passwd "${PROJECT_NAME_LOWER}" "$MQTT_PASSWORD"
+fi
+
+# ============================================
+# DOCKER START
+# ============================================
+wait_docker
+docker compose pull
+docker compose $PROFILES_ARGS up -d --remove-orphans
+
+# ============================================
+# SYSTEMD STACK
+# ============================================
+cat > /etc/systemd/system/${PROJECT_NAME_LOWER}.service <<EOF
+[Unit]
+Description=${PROJECT_NAME} Stack
+Requires=docker.service
+After=docker.service
+
+[Service]
+WorkingDirectory=${INSTALL_DIR}
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reexec
+systemctl enable ${PROJECT_NAME_LOWER}
+
+# ============================================
+# CLI
+# ============================================
+cat > /usr/local/bin/${PROJECT_NAME_LOWER}-status <<EOF
+#!/bin/bash
+cd ${INSTALL_DIR}
+docker compose ps
+EOF
+
+chmod +x /usr/local/bin/${PROJECT_NAME_LOWER}-status
+
+# ============================================
+# FIN
+# ============================================
+IP=$(hostname -I | awk '{print $1}')
+whiptail --msgbox "Installation terminée\nIP: $IP" 10 60
+
+exit 0
