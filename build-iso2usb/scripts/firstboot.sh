@@ -5,7 +5,9 @@
 #   --list    : liste les étapes disponibles
 #   --help    : affiche cette aide
 
-set -e
+set -euo pipefail
+exec > /var/log/neurhomia-firstboot.log 2>&1
+set -x
 
 # Vérification des droits root
 if [ "$EUID" -ne 0 ]; then
@@ -24,7 +26,7 @@ INSTALL_DIR="/opt/${PROJECT_NAME_LOWER}"
 LOG_FILE="/home/firstboot.log"
 
 # Détection du premier utilisateur
-TARGET_USER=$(awk -F: '$3 >= 1000 && $3 < 65534 { print $1; exit }' /etc/passwd)
+TARGET_USER=$(awk -F: '$3 >= 1000 && $3 < 65534 { print $1; exit }' /etc/passwd || true)
 [ -z "$TARGET_USER" ] && TARGET_USER="${PROJECT_NAME_LOWER}"
 TARGET_HOME=$(eval echo "~${TARGET_USER}")
 
@@ -260,7 +262,18 @@ etape9_5_install_docker() {
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
         apt-get update -qq
         apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        # Attendre Docker
+        echo "[INFO] Attente du démarrage de Docker..."
+        until systemctl is-active --quiet docker; do
+            sleep 2
+        done
+        # Ajout utilisateur
         usermod -aG docker "$TARGET_USER"
+        newgrp docker <<EOF
+        cd ${INSTALL_DIR}
+          docker compose ${PROFILES_ARGS} up -d
+        EOF
+        # active docker
         systemctl enable --now docker
         whiptail --msgbox "Docker installé avec succès." 8 60
     else
@@ -424,7 +437,16 @@ etape12_finalisation() {
              --msgbox "Configuration terminée !\n\nAdresse IP : $CURRENT_IP\nFuseau horaire : $SELECTED_TZ\n\nAccédez au dashboard : http://$CURRENT_IP:8080\n\nLe service de premier démarrage va maintenant se désactiver." 16 75
 
     systemctl disable ${PROJECT_NAME_LOWER}-firstboot.service 2>/dev/null
-    rm -f "/etc/systemd/system/${PROJECT_NAME_LOWER}-firstboot.service" 2>/dev/null
+    
+    # rm -f "/etc/systemd/system/${PROJECT_NAME_LOWER}-firstboot.service" 2>/dev/null
+    
+    if [ -d "${INSTALL_DIR}" ]; then
+        echo "[INFO] Mise à jour du dépôt existant..."
+        cd "${INSTALL_DIR}"
+        git pull
+    else
+        git clone "https://github.com/${GITHUB_REPO}.git" "${INSTALL_DIR}"
+    fi
     systemctl daemon-reload
 }
 
