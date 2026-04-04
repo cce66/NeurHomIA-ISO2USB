@@ -8,7 +8,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # --- Début logging ---
-LOG_FILE="/home/${USER}/firstboot.log" 
+LOG_FILE="/home/firstboot.log" 
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "========================================="
 echo "Début de firstboot.sh : $(date)"
@@ -29,7 +29,6 @@ GITHUB_OWNER_NAME="cce66"
 
 # URLs GitHub
 GITHUB_REPO="${GITHUB_OWNER_NAME}/${PROJECT_NAME}"
-
 
 SERVICE_NAME="${PROJECT_NAME_LOWER}-firstboot.service"
 INSTALL_DIR="/opt/${PROJECT_NAME_LOWER}"
