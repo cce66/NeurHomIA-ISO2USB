@@ -45,10 +45,10 @@
 ## ⚡ Quick Start
 
 ```bash
-mkdir -p ~/NeurHomIA-Key
-wget -O ~/NeurHomIA-Key/build-iso.sh https://raw.githubusercontent.com/cce66/NeurHomIA-ISO2USB/main/build-iso.sh
-chmod +x ~/NeurHomIA-Key/build-iso.sh
-cd ~/NeurHomIA-Key
+mkdir -p ~/NeurHomIA-ISO2USB
+wget -O ~/NeurHomIA-ISO2USB/build-iso.sh https://raw.githubusercontent.com/cce66/NeurHomIA-ISO2USB/main/build-iso.sh
+chmod +x ~/NeurHomIA-ISO2USB/build-iso.sh
+cd ~/NeurHomIA-ISO2USB
 sudo bash build-iso.sh
 ```
 
@@ -76,25 +76,25 @@ wget p7zip-full openssl xorriso squashfs-tools schroot rsync syslinux-utils isol
 ### 1. 📁 Créer le répertoire
 
 ```bash
-mkdir -p ~/NeurHomIA-Key
+mkdir -p ~/NeurHomIA-ISO2USB
 ```
 
 ### 2. 📶 Télécharger le script
 
 ```bash
-wget -O ~/NeurHomIA-Key/build-iso.sh https://raw.githubusercontent.com/cce66/NeurHomIA/main/build-iso.sh
+wget -O ~/NeurHomIA-ISO2USB/build-iso.sh https://raw.githubusercontent.com/cce66/NeurHomIA-ISO2USB/main/build-iso.sh
 ```
 
 ### 3. 🛠️ Rendre exécutable
 
 ```bash
-chmod +x ~/NeurHomIA-Key/build-iso.sh
+chmod +x ~/NeurHomIA-ISO2USB/build-iso.sh
 ```
 
 ### 4. ▶️ Exécuter
 
 ```bash
-cd ~/NeurHomIA-Key
+cd ~/NeurHomIA-ISO2USB
 sudo bash build-iso.sh
 ```
 
@@ -124,7 +124,7 @@ Le script exécute les étapes suivantes :
 ## 💿 Gravure USB
 
 ```bash
-sudo dd if=~/neurhomia-key/neurhomia-server-24.04.4-auto.iso \
+sudo dd if=~/neurhomia-iso2usb/neurhomia-server-24.04.4-auto.iso \
   of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
@@ -257,12 +257,6 @@ Apache 2.0
 
 ---
 
-## 🤝 Contribuer
-
-PR bienvenues 👍
-
----
-
 ## 🔗 Liens
 
-* GitHub : [https://github.com/cce66/NeurHomIA](https://github.com/cce66/NeurHomIA)
+* GitHub : [https://github.com/cce66/NeurHomIA-ISO2USB](https://github.com/cce66/NeurHomIA-ISO2USB)
