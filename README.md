@@ -1,4 +1,4 @@
-# 🚀 NeurHomIA — Construction d'ISO Ubuntu Server
+# 🚀 NeurHomIA-ISO2USB — Construction d'ISO Ubuntu Server pour NeurHomIA
 
 > 🔥 Génération automatisée d'une ISO Ubuntu Server prête à l’emploi avec **autoinstall**, **LVM**, **Docker** et configuration post-install.
 
